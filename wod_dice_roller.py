@@ -122,3 +122,24 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# 🌎 Flask API Integration (Add this at the BOTTOM of your script)
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+@app.route('/roll', methods=['GET'])
+def roll():
+    num_dice = int(request.args.get('num_dice', 1))
+    difficulty = int(request.args.get('difficulty', 6))
+    results = [random.randint(1, 10) for _ in range(num_dice)]
+    successes = sum(1 for die in results if die >= difficulty)
+    
+    return jsonify({"results": results, "successes": successes, "difficulty": difficulty})
+
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({"message": "WOD Dice Roller API is running!"})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
