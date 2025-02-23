@@ -118,13 +118,37 @@ app = Flask(__name__)
 
 @app.route('/roll', methods=['GET'])
 def roll():
-    """API Endpoint for rolling dice."""
+    """API Endpoint for rolling dice, with botch and Hunger mechanics (for Vampire only)."""
     try:
         num_dice = int(request.args.get('num_dice', 1))
         difficulty = int(request.args.get('difficulty', 6))
+        splat = request.args.get('splat', '').lower()  # Detect the splat type
+        hunger_dice = int(request.args.get('hunger', 0)) if splat == "vampire" else 0  # Only for Vampires
+
+        # Roll all dice
         results = [random.randint(1, 10) for _ in range(num_dice)]
+        hunger_results = results[:hunger_dice] if hunger_dice > 0 else []  # First X dice are Hunger Dice (if Vampire)
+
+        # Count successes
         successes = sum(1 for die in results if die >= difficulty)
-        return jsonify({"results": results, "successes": successes, "difficulty": difficulty})
+
+        # Botch Detection (applies to all splats)
+        botch = (successes == 0 and 1 in results)
+
+        # Vampire-Specific Effects (Hunger, Messy Criticals, Bestial Failures)
+        messy_critical = (splat == "vampire" and results.count(10) >= 2 and any(die == 10 for die in hunger_results))
+        bestial_failure = (splat == "vampire" and botch and any(die == 1 for die in hunger_results))
+
+        return jsonify({
+            "results": results,
+            "hunger_results": hunger_results if splat == "vampire" else None,
+            "successes": successes,
+            "difficulty": difficulty,
+            "botch": botch,
+            "messy_critical": messy_critical if splat == "vampire" else None,
+            "bestial_failure": bestial_failure if splat == "vampire" else None
+        })
+
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
